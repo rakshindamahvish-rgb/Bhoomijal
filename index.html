@@ -1,0 +1,2076 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BhoomiJal — National Groundwater Crisis Intelligence & Prediction Platform</title>
+<meta name="description" content="Predict tomorrow's water crisis, today. AI-driven hydrogeological intelligence platform bridging 3D subterranean aquifer models, satellite telemetry, and CGWB monitoring data.">
+<meta name="theme-color" content="#060D11">
+
+<!-- Preconnect Fonts -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700&family=IBM+Plex+Mono:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+<!-- Leaflet CSS & JS -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+
+<!-- Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+
+<!-- Three.js + OrbitControls for 3D Groundwater Story -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+
+<style>
+  :root {
+    --bg-void: #04090C;
+    --bg-deep: #071116;
+    --bg-surface: #0C1A20;
+    --bg-card: rgba(14, 28, 35, 0.72);
+    --bg-card-hover: rgba(20, 39, 48, 0.85);
+    --line: rgba(56, 189, 248, 0.12);
+    --line-active: rgba(56, 189, 248, 0.35);
+    --line-glow: rgba(0, 240, 255, 0.4);
+    
+    --text-primary: #F0F6F8;
+    --text-secondary: #94A9B3;
+    --text-tertiary: #5A707C;
+    
+    --cyan-glow: #00F0FF;
+    --cyan-dim: #0284C7;
+    --teal-water: #38BDF8;
+    
+    --risk-low: #10B981;
+    --risk-low-glow: rgba(16, 185, 129, 0.2);
+    --risk-mod: #F59E0B;
+    --risk-mod-glow: rgba(245, 158, 11, 0.2);
+    --risk-high: #F97316;
+    --risk-high-glow: rgba(249, 115, 22, 0.2);
+    --risk-crit: #EF4444;
+    --risk-crit-glow: rgba(239, 68, 68, 0.24);
+
+    --glass-blur: blur(16px);
+    --radius-sm: 8px;
+    --radius-md: 14px;
+    --radius-lg: 20px;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+  body {
+    background: var(--bg-void);
+    color: var(--text-primary);
+    font-family: 'Plus Jakarta Sans', -apple-system, sans-serif;
+    font-size: 14px;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+    overflow-x: hidden;
+    background-image: 
+      radial-gradient(circle at 10% 0%, rgba(2, 132, 199, 0.12), transparent 45%),
+      radial-gradient(circle at 90% 12%, rgba(239, 68, 68, 0.08), transparent 40%),
+      radial-gradient(circle at 50% 60%, rgba(16, 185, 129, 0.04), transparent 50%),
+      linear-gradient(180deg, #04090C 0%, #071116 100%);
+    background-attachment: fixed;
+    min-height: 100vh;
+  }
+
+  h1, h2, h3, h4 { font-family: 'Space Grotesk', sans-serif; font-weight: 700; letter-spacing: -0.02em; color: #FFF; }
+  .mono { font-family: 'IBM Plex Mono', monospace; font-variant-numeric: tabular-nums; }
+  a { color: inherit; text-decoration: none; }
+  .container { max-width: 1320px; margin: 0 auto; padding: 0 24px; }
+
+  /* Navbar */
+  nav {
+    position: sticky; top: 0; z-index: 1000;
+    background: rgba(4, 9, 12, 0.82);
+    backdrop-filter: var(--glass-blur);
+    border-bottom: 1px solid var(--line);
+    transition: all .2s ease;
+  }
+  .nav-wrap {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 14px 24px; max-width: 1320px; margin: 0 auto; gap: 16px;
+  }
+  .brand { display: flex; align-items: center; gap: 12px; cursor: pointer; }
+  .brand-icon {
+    width: 38px; height: 38px; border-radius: 10px;
+    background: linear-gradient(135deg, rgba(0,240,255,0.25), rgba(2,132,199,0.08));
+    border: 1px solid rgba(0,240,255,0.4);
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 0 16px rgba(0,240,255,0.22);
+  }
+  .brand-title { font-size: 20px; font-weight: 800; letter-spacing: -0.03em; }
+  .brand-title span { color: var(--cyan-glow); text-shadow: 0 0 10px rgba(0,240,255,0.4); }
+  .brand-tag { font-size: 9.5px; font-family: 'IBM Plex Mono'; color: var(--text-tertiary); letter-spacing: 0.1em; text-transform: uppercase; }
+
+  .nav-tabs {
+    display: flex; gap: 4px; background: rgba(12, 26, 32, 0.7);
+    border: 1px solid var(--line); border-radius: 30px; padding: 4px 6px;
+  }
+  .nav-tab-btn {
+    font-family: 'Plus Jakarta Sans'; font-size: 13px; font-weight: 500; color: var(--text-secondary);
+    background: transparent; border: none; padding: 7px 14px; border-radius: 20px; cursor: pointer;
+    transition: all .2s cubic-bezier(.16,1,.3,1); display: flex; align-items: center; gap: 7px;
+  }
+  .nav-tab-btn:hover { color: var(--text-primary); background: rgba(255,255,255,0.04); }
+  .nav-tab-btn.active {
+    background: linear-gradient(135deg, rgba(0,240,255,0.18), rgba(2,132,199,0.28));
+    color: var(--cyan-glow); font-weight: 600; border: 1px solid rgba(0,240,255,0.35);
+    box-shadow: 0 2px 10px rgba(0,240,255,0.18);
+  }
+
+  .nav-badge-live {
+    font-family: 'IBM Plex Mono'; font-size: 11px; padding: 5px 12px; border-radius: 20px;
+    background: rgba(16, 185, 129, 0.12); color: var(--risk-low); border: 1px solid rgba(16, 185, 129, 0.35);
+    display: flex; align-items: center; gap: 6px; font-weight: 600;
+  }
+  .live-dot {
+    width: 6px; height: 6px; border-radius: 50%; background: var(--risk-low);
+    box-shadow: 0 0 8px var(--risk-low); animation: pulse-live 2s infinite;
+  }
+  @keyframes pulse-live { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.4; transform: scale(1.3); } }
+
+  /* Mobile Bar */
+  .mobile-nav-strip {
+    display: none; position: sticky; top: 67px; z-index: 999;
+    background: rgba(7, 17, 22, 0.95); border-bottom: 1px solid var(--line);
+    overflow-x: auto; padding: 8px 16px;
+  }
+  .mobile-nav-strip .strip-inner { display: flex; gap: 6px; width: max-content; }
+  .mobile-nav-strip button {
+    font-family: 'Plus Jakarta Sans'; font-size: 12px; color: var(--text-secondary);
+    background: var(--bg-surface); border: 1px solid var(--line); padding: 6px 12px;
+    border-radius: 20px; white-space: nowrap; cursor: pointer;
+  }
+  .mobile-nav-strip button.active {
+    background: rgba(0,240,255,0.15); color: var(--cyan-glow); border-color: var(--cyan-glow);
+  }
+  @media (max-width: 1040px) {
+    .nav-tabs { display: none; }
+    .mobile-nav-strip { display: block; }
+  }
+
+  /* Page Sections */
+  section.module-view { display: none; padding: 40px 0 80px; animation: slideFade .3s ease-out; }
+  section.module-view.active { display: block; }
+  @keyframes slideFade { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+
+  /* Hero Section */
+  .hero-grid { display: grid; grid-template-columns: 1.15fr 1fr; gap: 36px; align-items: center; padding: 36px 0 44px; }
+  @media (max-width: 990px) { .hero-grid { grid-template-columns: 1fr; } }
+  
+  .hero-eyebrow {
+    display: inline-flex; align-items: center; gap: 8px; font-family: 'IBM Plex Mono'; font-size: 12px;
+    color: var(--cyan-glow); text-transform: uppercase; letter-spacing: 0.12em;
+    background: rgba(0,240,255,0.08); padding: 5px 12px; border-radius: 20px; border: 1px solid rgba(0,240,255,0.25);
+    margin-bottom: 20px;
+  }
+  .hero-title {
+    font-size: clamp(34px, 4.4vw, 56px); line-height: 1.08; font-weight: 800; letter-spacing: -0.03em;
+  }
+  .hero-title em {
+    font-style: normal;
+    background: linear-gradient(135deg, #FFF 20%, var(--cyan-glow) 80%);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  }
+  .hero-desc {
+    color: var(--text-secondary); font-size: 16px; line-height: 1.65; margin-top: 20px; max-width: 580px;
+  }
+  .hero-actions { display: flex; gap: 14px; margin-top: 32px; flex-wrap: wrap; }
+
+  button.btn-cyan {
+    background: linear-gradient(135deg, #00F0FF, #0284C7);
+    color: #031015; font-family: 'Plus Jakarta Sans'; font-weight: 700; font-size: 14px;
+    padding: 13px 26px; border-radius: 30px; border: none; cursor: pointer;
+    box-shadow: 0 4px 20px rgba(0,240,255,0.35); transition: all .2s ease;
+    display: inline-flex; align-items: center; gap: 9px;
+  }
+  button.btn-cyan:hover { transform: translateY(-2px); box-shadow: 0 6px 26px rgba(0,240,255,0.5); }
+  
+  button.btn-glass {
+    background: rgba(14, 28, 35, 0.75); color: var(--text-primary);
+    font-family: 'Plus Jakarta Sans'; font-weight: 600; font-size: 14px;
+    padding: 13px 24px; border-radius: 30px; border: 1px solid var(--line-active);
+    cursor: pointer; transition: all .2s ease; display: inline-flex; align-items: center; gap: 9px;
+    backdrop-filter: var(--glass-blur);
+  }
+  button.btn-glass:hover { background: rgba(22, 44, 55, 0.9); border-color: var(--cyan-glow); transform: translateY(-1px); }
+
+  /* 3D Aquifer Interactive Canvas Box */
+  .canvas-3d-box {
+    position: relative; width: 100%; height: 440px; border-radius: var(--radius-lg);
+    border: 1px solid var(--line-active); background: radial-gradient(circle at 50% 50%, #0B1C24, #04090D);
+    overflow: hidden; box-shadow: 0 12px 40px rgba(0,0,0,0.6), inset 0 0 30px rgba(0,240,255,0.05);
+  }
+  #groundwater3DCanvas { width: 100%; height: 100%; display: block; cursor: grab; }
+  #groundwater3DCanvas:active { cursor: grabbing; }
+
+  .canvas-overlay-ui {
+    position: absolute; top: 16px; left: 16px; right: 16px;
+    display: flex; justify-content: space-between; pointer-events: none;
+  }
+  .overlay-pill {
+    pointer-events: auto; background: rgba(7, 17, 22, 0.85); backdrop-filter: blur(10px);
+    border: 1px solid var(--line); border-radius: 20px; padding: 6px 14px;
+    font-family: 'IBM Plex Mono'; font-size: 11px; color: var(--cyan-glow);
+    display: flex; align-items: center; gap: 6px;
+  }
+  .canvas-controls-legend {
+    position: absolute; bottom: 14px; left: 16px; right: 16px;
+    display: flex; justify-content: space-between; align-items: flex-end;
+    pointer-events: none;
+  }
+  .canvas-strata-guide {
+    pointer-events: auto; background: rgba(7, 17, 22, 0.88); backdrop-filter: blur(10px);
+    border: 1px solid var(--line); border-radius: 12px; padding: 10px 14px;
+    font-size: 11px; font-family: 'IBM Plex Mono'; display: flex; flex-direction: column; gap: 5px;
+  }
+  .strata-item { display: flex; align-items: center; gap: 8px; }
+  .strata-indicator { width: 9px; height: 9px; border-radius: 2px; }
+
+  /* Hero Stats Row */
+  .hero-stats-row {
+    display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-top: 40px;
+  }
+  @media (max-width: 900px) { .hero-stats-row { grid-template-columns: repeat(2, 1fr); } }
+  @media (max-width: 520px) { .hero-stats-row { grid-template-columns: 1fr; } }
+  
+  .glass-card {
+    background: var(--bg-card); backdrop-filter: var(--glass-blur);
+    border: 1px solid var(--line); border-radius: var(--radius-md);
+    padding: 20px; transition: all .25s ease;
+  }
+  .glass-card:hover {
+    background: var(--bg-card-hover); border-color: var(--line-active);
+    transform: translateY(-2px); box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+  }
+  .stat-num { font-family: 'IBM Plex Mono'; font-size: 30px; font-weight: 700; line-height: 1.1; }
+  .stat-label { font-size: 13px; color: var(--text-secondary); margin-top: 6px; }
+  .stat-tag { font-family: 'IBM Plex Mono'; font-size: 10px; color: var(--text-tertiary); margin-top: 4px; }
+
+  /* Risk Badges */
+  .risk-badge {
+    display: inline-flex; align-items: center; gap: 6px; font-family: 'IBM Plex Mono';
+    font-size: 11px; font-weight: 600; padding: 4px 10px; border-radius: 20px;
+    letter-spacing: 0.04em; text-transform: uppercase;
+  }
+  .risk-badge.low { background: var(--risk-low-glow); color: var(--risk-low); border: 1px solid rgba(16,185,129,0.35); }
+  .risk-badge.mod { background: var(--risk-mod-glow); color: var(--risk-mod); border: 1px solid rgba(245,158,11,0.35); }
+  .risk-badge.high { background: var(--risk-high-glow); color: var(--risk-high); border: 1px solid rgba(249,115,22,0.35); }
+  .risk-badge.crit { background: var(--risk-crit-glow); color: var(--risk-crit); border: 1px solid rgba(239,68,68,0.4); }
+  .badge-pip { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+
+  /* Section Titles */
+  .section-header { margin-bottom: 28px; }
+  .section-eyebrow {
+    font-family: 'IBM Plex Mono'; font-size: 11.5px; text-transform: uppercase;
+    letter-spacing: 0.1em; color: var(--cyan-glow); margin-bottom: 8px; display: block;
+  }
+  .section-title { font-size: clamp(26px, 3vw, 36px); font-weight: 700; }
+  .section-subtitle { color: var(--text-secondary); font-size: 15px; margin-top: 6px; max-width: 720px; }
+
+  /* Module 2: Map View Styling */
+  .map-layout-grid {
+    display: grid; grid-template-columns: 1fr 360px; gap: 20px; align-items: start;
+  }
+  @media (max-width: 1024px) { .map-layout-grid { grid-template-columns: 1fr; } }
+  
+  .map-box {
+    position: relative; height: 580px; border-radius: var(--radius-lg);
+    border: 1px solid var(--line-active); background: #081216; overflow: hidden;
+    box-shadow: 0 12px 32px rgba(0,0,0,0.5);
+  }
+  #map { width: 100%; height: 100%; z-index: 10; }
+
+  .hierarchy-bar {
+    display: flex; gap: 12px; margin-bottom: 16px; flex-wrap: wrap;
+  }
+  .geo-select {
+    background: var(--bg-surface); border: 1px solid var(--line-active); color: var(--text-primary);
+    font-family: 'Plus Jakarta Sans'; font-size: 13px; font-weight: 500; padding: 10px 16px;
+    border-radius: var(--radius-sm); outline: none; cursor: pointer; transition: border-color .15s ease;
+  }
+  .geo-select:focus, .geo-select:hover { border-color: var(--cyan-glow); }
+
+  .map-sidebar-list {
+    max-height: 580px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px;
+    padding-right: 4px;
+  }
+  .map-sidebar-list::-webkit-scrollbar { width: 4px; }
+  .map-sidebar-list::-webkit-scrollbar-thumb { background: var(--line-active); border-radius: 4px; }
+
+  .profile-mini-card {
+    background: var(--bg-card); border: 1px solid var(--line); border-radius: var(--radius-md);
+    padding: 14px 16px; cursor: pointer; transition: all .18s ease; display: flex;
+    justify-content: space-between; align-items: center;
+  }
+  .profile-mini-card:hover {
+    background: var(--bg-card-hover); border-color: var(--cyan-glow);
+    transform: translateX(3px);
+  }
+  .pmc-name { font-weight: 700; font-size: 14px; }
+  .pmc-sub { font-size: 11px; color: var(--text-tertiary); margin-top: 2px; }
+  .pmc-score { font-family: 'IBM Plex Mono'; font-size: 18px; font-weight: 700; }
+
+  /* Module 3 & 4: Dashboard & AI Risk Analysis */
+  .grid-dashboard { display: grid; grid-template-columns: 1.1fr 1fr; gap: 24px; }
+  @media (max-width: 980px) { .grid-dashboard { grid-template-columns: 1fr; } }
+
+  .forecast-horizon-row {
+    display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 20px;
+  }
+  @media (max-width: 600px) { .forecast-horizon-row { grid-template-columns: repeat(2, 1fr); } }
+
+  .horizon-card {
+    background: var(--bg-surface); border: 1px solid var(--line); border-radius: var(--radius-sm);
+    padding: 14px; text-align: center;
+  }
+  .horizon-card.highlight {
+    border-color: var(--risk-crit); background: rgba(239, 68, 68, 0.08);
+  }
+  .horizon-label { font-size: 11px; font-family: 'IBM Plex Mono'; color: var(--text-tertiary); text-transform: uppercase; }
+  .horizon-val { font-family: 'IBM Plex Mono'; font-size: 20px; font-weight: 700; margin: 4px 0; }
+  .horizon-meta { font-size: 10.5px; color: var(--text-secondary); }
+
+  /* AI Drivers Decomposition */
+  .driver-item {
+    padding: 14px 16px; background: rgba(7, 17, 22, 0.6); border-radius: var(--radius-sm);
+    border: 1px solid var(--line); margin-bottom: 10px;
+  }
+  .driver-head { display: flex; justify-content: space-between; font-size: 13px; font-weight: 600; margin-bottom: 6px; }
+  .driver-track {
+    width: 100%; height: 6px; background: rgba(255,255,255,0.06); border-radius: 4px; overflow: hidden;
+  }
+  .driver-fill { height: 100%; border-radius: 4px; transition: width .5s ease; }
+  .driver-desc { font-size: 11.5px; color: var(--text-secondary); margin-top: 6px; line-height: 1.45; }
+
+  /* Module 5: Early Warning Center */
+  .alert-banner-hero {
+    background: linear-gradient(135deg, rgba(239,68,68,0.18), rgba(12,26,32,0.9));
+    border: 1px solid rgba(239,68,68,0.45); border-radius: var(--radius-lg);
+    padding: 24px 28px; margin-bottom: 24px; position: relative; overflow: hidden;
+  }
+  .alert-banner-hero::before {
+    content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 5px;
+    background: var(--risk-crit); box-shadow: 0 0 16px var(--risk-crit);
+  }
+  .alert-title-row { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; }
+
+  /* Module 6: Action Center */
+  .action-tabs-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-bottom: 20px; }
+  @media (max-width: 820px) { .action-tabs-grid { grid-template-columns: repeat(2, 1fr); } }
+  .action-tab-card {
+    background: var(--bg-surface); border: 1px solid var(--line); border-radius: var(--radius-md);
+    padding: 16px; cursor: pointer; transition: all .2s ease;
+  }
+  .action-tab-card.active, .action-tab-card:hover {
+    border-color: var(--cyan-glow); background: rgba(0,240,255,0.06); transform: translateY(-2px);
+  }
+  .action-tab-icon { font-size: 24px; margin-bottom: 8px; }
+  .action-tab-title { font-weight: 700; font-size: 14px; }
+
+  /* Module 7: What-If Simulator */
+  .sim-container {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 24px; align-items: start;
+  }
+  @media (max-width: 900px) { .sim-container { grid-template-columns: 1fr; } }
+  
+  .sim-slider-row { margin-bottom: 18px; }
+  .sim-slider-head { display: flex; justify-content: space-between; font-size: 13px; font-weight: 600; margin-bottom: 6px; }
+  input[type=range] {
+    width: 100%; accent-color: var(--cyan-glow); height: 6px; background: rgba(255,255,255,0.1);
+    border-radius: 4px; outline: none; cursor: pointer;
+  }
+
+  .sim-outcome-panel {
+    background: linear-gradient(145deg, rgba(14,28,35,0.9), rgba(7,17,22,0.95));
+    border: 1px solid var(--line-active); border-radius: var(--radius-lg); padding: 26px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+  }
+
+  /* Footer */
+  footer {
+    border-top: 1px solid var(--line); background: #03080A; padding: 48px 0 24px;
+    font-size: 12.5px; color: var(--text-tertiary);
+  }
+  .footer-grid { display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 32px; margin-bottom: 32px; }
+  @media (max-width: 768px) { .footer-grid { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+
+<!-- Navigation Bar -->
+<nav>
+  <div class="nav-wrap">
+    <div class="brand" onclick="switchNavModule('landing')">
+      <div class="brand-icon">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+          <path d="M12 2.2C12 2.2 4.5 11.8 4.5 16.8C4.5 21 7.9 23.5 12 23.5C16.1 23.5 19.5 21 19.5 16.8C19.5 11.8 12 2.2 12 2.2Z" stroke="#00F0FF" stroke-width="2"/>
+          <path d="M8 17C8 19.2 9.8 21 12 21" stroke="#38BDF8" stroke-width="1.8" stroke-linecap="round"/>
+        </svg>
+      </div>
+      <div>
+        <div class="brand-title">Bhoomi<span>Jal</span></div>
+        <div class="brand-tag">Groundwater Intelligence Engine</div>
+      </div>
+    </div>
+
+    <div class="nav-tabs" id="mainNavTabs">
+      <button class="nav-tab-btn active" data-mod="landing" onclick="switchNavModule('landing')">🏠 Home</button>
+      <button class="nav-tab-btn" data-mod="map" onclick="switchNavModule('map')">🗺️ Intelligence Map</button>
+      <button class="nav-tab-btn" data-mod="predict" onclick="switchNavModule('predict')">🔮 Prediction Hub</button>
+      <button class="nav-tab-btn" data-mod="ai" onclick="switchNavModule('ai')">🧠 AI Risk Analysis</button>
+      <button class="nav-tab-btn" data-mod="warning" onclick="switchNavModule('warning')">⚠️ Early-Warning</button>
+      <button class="nav-tab-btn" data-mod="action" onclick="switchNavModule('action')">🌱 Action Center</button>
+      <button class="nav-tab-btn" data-mod="sim" onclick="switchNavModule('sim')">🔬 What-If Simulator</button>
+    </div>
+
+    <div class="nav-badge-live">
+      <span class="live-dot"></span> CGWB 2024 ACTIVE
+    </div>
+  </div>
+</nav>
+
+<!-- Mobile Nav Strip -->
+<div class="mobile-nav-strip">
+  <div class="strip-inner">
+    <button class="active" onclick="switchNavModule('landing')">🏠 Home</button>
+    <button onclick="switchNavModule('map')">🗺️ Map</button>
+    <button onclick="switchNavModule('predict')">🔮 Prediction</button>
+    <button onclick="switchNavModule('ai')">🧠 AI Drivers</button>
+    <button onclick="switchNavModule('warning')">⚠️ Alerts</button>
+    <button onclick="switchNavModule('action')">🌱 Actions</button>
+    <button onclick="switchNavModule('sim')">🔬 Simulator</button>
+  </div>
+</div>
+
+<main class="container">
+
+  <!-- ================= 1. LANDING PAGE ================= -->
+  <section class="module-view active" id="view-landing">
+    <div class="hero-grid">
+      <div>
+        <div class="hero-eyebrow">
+          <span>●</span> Ground Truth & Predictive AI
+        </div>
+        <h1 class="hero-title">
+          Predict Tomorrow’s Water Crisis, <em>Today.</em>
+        </h1>
+        <p class="hero-desc">
+          BhoomiJal bridges 3D volumetric aquifer intelligence, automated piezometric telemetry from 16,000+ monitoring wells, and satellite gravimetry to detect groundwater exhaustion 1–6 months before wells run dry.
+        </p>
+
+        <div class="hero-actions">
+          <button class="btn-cyan" onclick="switchNavModule('map')">
+            Explore Groundwater Intelligence →
+          </button>
+          <button class="btn-glass" onclick="switchNavModule('sim')">
+            Launch 3D What-If Simulator 🔬
+          </button>
+        </div>
+      </div>
+
+      <!-- 3D Subterranean Interactive Aquifer Visual -->
+      <div>
+        <div class="canvas-3d-box">
+          <canvas id="groundwater3DCanvas"></canvas>
+
+          <div class="canvas-overlay-ui">
+            <div class="overlay-pill">
+              <span>💧</span> 3D Subterranean Stratum Engine
+            </div>
+            <div class="overlay-pill" style="color:var(--text-tertiary); font-size:10px;">
+              🖱️ Drag to Rotate / Scroll to Zoom
+            </div>
+          </div>
+
+          <div class="canvas-controls-legend">
+            <div class="canvas-strata-guide">
+              <div class="strata-item"><span class="strata-indicator" style="background:#2E7D32;"></span> Topsoil & Root Zone (0–3m)</div>
+              <div class="strata-item"><span class="strata-indicator" style="background:#8D6E63;"></span> Vadose Porous Silt (3–14m)</div>
+              <div class="strata-item"><span class="strata-indicator" style="background:#00F0FF; box-shadow:0 0 6px #00F0FF;"></span> Saturated Aquifer Layer</div>
+              <div class="strata-item"><span class="strata-indicator" style="background:#263238;"></span> Confining Impervious Bedrock</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- National Statistics Row -->
+    <div class="hero-stats-row">
+      <div class="glass-card">
+        <div class="stat-num mono" style="color:var(--risk-crit);">736 Units</div>
+        <div class="stat-label"><b>Over-Exploited Blocks</b> nationally (Extraction > 100%)</div>
+        <div class="stat-tag">Official CGWB 2024 Assessment</div>
+      </div>
+
+      <div class="glass-card">
+        <div class="stat-num mono" style="color:var(--risk-mod);">449.1 BCM</div>
+        <div class="stat-label"><b>Total Annual Groundwater Recharge</b> vs 241.3 BCM extraction</div>
+        <div class="stat-tag">59.3% National Stage of Extraction</div>
+      </div>
+
+      <div class="glass-card">
+        <div class="stat-num mono" style="color:var(--cyan-glow);">87%</div>
+        <div class="stat-label"><b>Irrigation Extraction Share</b> irrigating 62% of net cropped area</div>
+        <div class="stat-tag">High agricultural vulnerability</div>
+      </div>
+
+      <div class="glass-card">
+        <div class="stat-num mono" style="color:var(--risk-low);">1–6 Months</div>
+        <div class="stat-label"><b>Predictive Early Warning Horizon</b> before summer drying</div>
+        <div class="stat-tag">Random Forest + LSTM Ensemble</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= 2. GROUNDWATER INTELLIGENCE MAP ================= -->
+  <section class="module-view" id="view-map">
+    <div class="section-header">
+      <span class="section-eyebrow">Spatial Surveillance & Granular Drill-Down</span>
+      <h2 class="section-title">Groundwater Intelligence Map</h2>
+      <p class="section-subtitle">Navigate from State down to District and Mandal/Village to inspect localized aquifer stress, extraction stage, and hydrogeological risk levels.</p>
+    </div>
+
+    <!-- Hierarchy Drill-down Selector -->
+    <div class="hierarchy-bar">
+      <select id="mapStateSelect" class="geo-select" onchange="onStateSelected(this.value)">
+        <option value="all">All States (National View)</option>
+        <option value="Andhra Pradesh">Andhra Pradesh</option>
+        <option value="Punjab">Punjab</option>
+        <option value="Rajasthan">Rajasthan</option>
+        <option value="Karnataka">Karnataka</option>
+        <option value="Maharashtra">Maharashtra</option>
+        <option value="Gujarat">Gujarat</option>
+        <option value="Tamil Nadu">Tamil Nadu</option>
+        <option value="Madhya Pradesh">Madhya Pradesh</option>
+        <option value="Kerala">Kerala</option>
+      </select>
+
+      <select id="mapDistrictSelect" class="geo-select" onchange="onDistrictSelected(this.value)">
+        <option value="all">All Districts</option>
+      </select>
+
+      <select id="mapTierFilter" class="geo-select" onchange="filterMapMarkers()">
+        <option value="all">All Risk Tiers</option>
+        <option value="Critical">🔴 Critical (81–100)</option>
+        <option value="High">🟠 High (61–80)</option>
+        <option value="Moderate">🟡 Moderate (31–60)</option>
+        <option value="Low">🟢 Low (0–30)</option>
+      </select>
+    </div>
+
+    <div class="map-layout-grid">
+      <div class="map-box">
+        <div id="map"></div>
+      </div>
+
+      <div class="glass-card">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+          <h3 style="font-size:16px;">Groundwater Profiles</h3>
+          <span class="mono" id="mapProfileCount" style="font-size:11px; color:var(--cyan-glow);">24 Units Loaded</span>
+        </div>
+        <div class="map-sidebar-list" id="mapProfilesSidebar"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= 3. PREDICTION DASHBOARD ================= -->
+  <section class="module-view" id="view-predict">
+    <div class="section-header">
+      <span class="section-eyebrow">Multi-Horizon Forecasting Hub</span>
+      <h2 class="section-title">Prediction Dashboard</h2>
+      <p class="section-subtitle">Forecasted piezometric conditions, seasonal depletion curves, and 1, 3, and 6-month predictive trajectories.</p>
+    </div>
+
+    <div style="margin-bottom:20px; display:flex; gap:12px; align-items:center;">
+      <label style="font-size:13px; color:var(--text-secondary);">Select Target Unit:</label>
+      <select id="predictBlockSelect" class="geo-select" style="min-width:300px; font-weight:700;" onchange="loadPredictionProfile(this.value)"></select>
+    </div>
+
+    <div class="grid-dashboard">
+      <!-- Left: Profile & Historical vs Prediction Chart -->
+      <div>
+        <div class="glass-card" style="margin-bottom:20px;">
+          <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+            <div>
+              <div style="display:flex; align-items:center; gap:10px;">
+                <h3 id="predictUnitTitle" style="font-size:22px;">Ravipadu, Palnadu (AP)</h3>
+                <span id="predictUnitTier" class="risk-badge crit"><span class="badge-pip"></span> Critical Risk</span>
+              </div>
+              <div class="mono" id="predictUnitMeta" style="font-size:12px; color:var(--text-tertiary); margin-top:4px;">
+                Mandal: Narasaraopet · Formation: Crystalline Limestone & Basalt · Depth: 24.8 mbgl
+              </div>
+            </div>
+            <div style="text-align:right;">
+              <div class="mono" id="predictUnitScore" style="font-size:32px; font-weight:800; color:var(--risk-crit);">86%</div>
+              <div style="font-size:10px; color:var(--text-tertiary); font-family:'IBM Plex Mono';">STRESS INDEX</div>
+            </div>
+          </div>
+
+          <!-- Multi-Horizon Forecast Row -->
+          <div class="forecast-horizon-row" style="margin-top:20px;">
+            <div class="horizon-card">
+              <div class="horizon-label">Current Depth</div>
+              <div class="horizon-val mono" id="horCurrent">24.8 m</div>
+              <div class="horizon-meta">Recorded Baseline</div>
+            </div>
+
+            <div class="horizon-card">
+              <div class="horizon-label">1-Month Outlook</div>
+              <div class="horizon-val mono" id="hor1Mo" style="color:var(--risk-mod);">25.6 m</div>
+              <div class="horizon-meta">+0.8m Drawdown</div>
+            </div>
+
+            <div class="horizon-card highlight">
+              <div class="horizon-label">3-Month Outlook</div>
+              <div class="horizon-val mono" id="hor3Mo" style="color:var(--risk-high);">27.4 m</div>
+              <div class="horizon-meta">+2.6m Critical Drop</div>
+            </div>
+
+            <div class="horizon-card highlight">
+              <div class="horizon-label">6-Month Summer</div>
+              <div class="horizon-val mono" id="hor6Mo" style="color:var(--risk-crit);">29.8 m</div>
+              <div class="horizon-meta">Shallow Well Failure</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Historical vs Predicted Trend Chart -->
+        <div class="glass-card">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;">
+            <div>
+              <h3>Historical vs Predicted Groundwater Trend</h3>
+              <div style="font-size:12px; color:var(--text-secondary);">Decadal piezometric depletion with upper/lower prediction bounds</div>
+            </div>
+            <span class="mono" style="font-size:11px; color:var(--cyan-glow); background:rgba(0,240,255,0.08); padding:3px 8px; border-radius:6px;">Model R² = 0.952</span>
+          </div>
+          <div style="height:270px;">
+            <canvas id="predictionTrendChart"></canvas>
+          </div>
+        </div>
+      </div>
+
+      <!-- Right: Pumping Pressure & Recharge Balances -->
+      <div>
+        <div class="glass-card">
+          <h3>Annual Volumetric Budget (MCM)</h3>
+          <div style="font-size:12px; color:var(--text-secondary); margin-bottom:16px;">Central Ground Water Board (CGWB) dynamic assessment ledger</div>
+
+          <div style="display:flex; flex-direction:column; gap:12px;">
+            <div style="display:flex; justify-content:space-between; font-size:13px;">
+              <span>Total Annual Recharge:</span>
+              <b class="mono" id="budgetRecharge" style="color:var(--risk-low);">1,120 MCM</b>
+            </div>
+            <div style="display:flex; justify-content:space-between; font-size:13px;">
+              <span>Current Extraction for All Uses:</span>
+              <b class="mono" id="budgetExtract" style="color:var(--risk-crit);">1,019 MCM</b>
+            </div>
+            <div style="display:flex; justify-content:space-between; font-size:13px;">
+              <span>Stage of Groundwater Extraction (SOE):</span>
+              <b class="mono" id="budgetSoe" style="color:var(--risk-high); font-weight:700;">91.2%</b>
+            </div>
+            <div style="display:flex; justify-content:space-between; font-size:13px;">
+              <span>Decadal Annual Decline Rate:</span>
+              <b class="mono" id="budgetDecline" style="color:var(--risk-crit);">-0.38 m/yr</b>
+            </div>
+          </div>
+        </div>
+
+        <div class="glass-card" style="margin-top:16px;">
+          <h3>Aquifer Extraction Breakdown</h3>
+          <div style="font-size:12px; color:var(--text-secondary); margin-bottom:14px;">Sectoral consumption share</div>
+          <div style="height:190px;">
+            <canvas id="extractionPieChart"></canvas>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= 4. AI RISK ANALYSIS ================= -->
+  <section class="module-view" id="view-ai">
+    <div class="section-header">
+      <span class="section-eyebrow">Explainable Machine Learning Diagnostics</span>
+      <h2 class="section-title">AI Risk Analysis: Why is the Risk Increasing?</h2>
+      <p class="section-subtitle">Rather than a black-box label, BhoomiJal decomposes localized risk into five physically grounded hydro-meteorological drivers.</p>
+    </div>
+
+    <div class="grid-dashboard">
+      <div>
+        <div class="glass-card">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+            <h3>Active Driver Breakdown: <span id="aiActiveBlockName" style="color:var(--cyan-glow);">Ravipadu</span></h3>
+            <span class="risk-badge crit" id="aiActiveTierBadge"><span class="badge-pip"></span> Critical Stress</span>
+          </div>
+
+          <div id="aiDriverList">
+            <!-- 1. Rainfall Deficit -->
+            <div class="driver-item">
+              <div class="driver-head">
+                <span>↓ Rainfall Deficit vs 50-Yr Normal</span>
+                <span class="mono" id="aiValRain" style="color:var(--risk-crit);">-24%</span>
+              </div>
+              <div class="driver-track"><div class="driver-fill" id="aiBarRain" style="width:75%; background:var(--risk-crit);"></div></div>
+              <div class="driver-desc">Deficient southwest monsoon precipitation severely limited recharge into the unconfined weathered bedrock.</div>
+            </div>
+
+            <!-- 2. Temperature Anomaly -->
+            <div class="driver-item">
+              <div class="driver-head">
+                <span>↑ Heat & Evapotranspiration Anomaly</span>
+                <span class="mono" id="aiValTemp" style="color:var(--risk-high);">+1.9°C</span>
+              </div>
+              <div class="driver-track"><div class="driver-fill" id="aiBarTemp" style="width:68%; background:var(--risk-high);"></div></div>
+              <div class="driver-desc">Elevated mean temperatures accelerating soil moisture depletion and driving higher crop watering frequencies.</div>
+            </div>
+
+            <!-- 3. Groundwater Level Drop Rate -->
+            <div class="driver-item">
+              <div class="driver-head">
+                <span>↓ Static Piezometric Head Drop</span>
+                <span class="mono" id="aiValDrop" style="color:var(--risk-crit);">-0.82 m/yr</span>
+              </div>
+              <div class="driver-track"><div class="driver-fill" id="aiBarDrop" style="width:85%; background:var(--risk-crit);"></div></div>
+              <div class="driver-desc">Decadal trend demonstrates persistent mining of non-replenishable static storage in deeper fractures.</div>
+            </div>
+
+            <!-- 4. Irrigation Demand -->
+            <div class="driver-item">
+              <div class="driver-head">
+                <span>↑ Irrigation Draft Intensity</span>
+                <span class="mono" id="aiValDraft" style="color:var(--risk-crit);">88.4%</span>
+              </div>
+              <div class="driver-track"><div class="driver-fill" id="aiBarDraft" style="width:88%; background:var(--risk-crit);"></div></div>
+              <div class="driver-desc">Concentrated tubewell drafting for flood-irrigated commercial crops exceeding natural hydraulic recovery.</div>
+            </div>
+
+            <!-- 5. Reservoir Storage -->
+            <div class="driver-item">
+              <div class="driver-head">
+                <span>↓ Surface Basin Live Storage</span>
+                <span class="mono" id="aiValRes" style="color:var(--risk-mod);">24.2%</span>
+              </div>
+              <div class="driver-track"><div class="driver-fill" id="aiBarRes" style="width:45%; background:var(--risk-mod);"></div></div>
+              <div class="driver-desc">Low river basin reservoir replenishment reduces canal water transfers, shifting 100% load to groundwater.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <div class="glass-card">
+          <h3>Feature Weight Importance (Shapley Values)</h3>
+          <div style="font-size:12px; color:var(--text-secondary); margin-bottom:16px;">Random Forest ensemble attribution matrix</div>
+          <div style="height:250px;">
+            <canvas id="shapleyRadarChart"></canvas>
+          </div>
+        </div>
+
+        <div class="glass-card" style="margin-top:16px;">
+          <h3>Scientific Interpretability Note</h3>
+          <p style="font-size:12.5px; color:var(--text-secondary); line-height:1.65; margin-top:8px;">
+            BhoomiJal’s AI engine does not rely solely on statistical correlation. It uses physics-guided loss constraints ensuring that <b>Water Mass Balance Conservation ($\Delta S = P - E - Q - G_w$)</b> is never violated during forward predictions.
+          </p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= 5. EARLY-WARNING CENTER ================= -->
+  <section class="module-view" id="view-warning">
+    <div class="section-header">
+      <span class="section-eyebrow">Real-Time Crisis Alerts & Hotspot Surveillance</span>
+      <h2 class="section-title">Early-Warning Center</h2>
+      <p class="section-subtitle">Active alerts generated for blocks crossing pre-summer vulnerability thresholds. Automated triggers for district disaster management cells.</p>
+    </div>
+
+    <!-- Featured Hero Alert -->
+    <div class="alert-banner-hero">
+      <div class="alert-title-row">
+        <div>
+          <span class="risk-badge crit" style="margin-bottom:8px;"><span class="badge-pip"></span> CRITICAL DROUGHT WARNING</span>
+          <h2 style="font-size:24px; color:#FFF;">🔴 Critical Alert — Ravipadu, Palnadu (Andhra Pradesh)</h2>
+        </div>
+        <div class="mono" style="font-size:12px; color:rgba(255,255,255,0.7);">Alert ID: BJ-AP-2026-09</div>
+      </div>
+      <p style="font-size:14px; color:#F0F6F8; margin-top:12px; line-height:1.6; max-width:920px;">
+        Groundwater stress in <b>Ravipadu and adjacent mandals</b> is projected to cross critical limits within the next <b>3 months</b>. Contributing factors: 24% rainfall deficit, tail-end canal supply delays, and intense post-monsoon commercial chili borewell pumping. 
+        <b>Over 120 agricultural borewells are predicted to fail by March.</b>
+      </p>
+
+      <div style="display:flex; gap:16px; margin-top:18px; flex-wrap:wrap; font-family:'IBM Plex Mono'; font-size:12px;">
+        <span style="color:var(--text-primary);">Affected Habitations: <b>Ravipadu, Kotappakonda, Satrasala</b></span>
+        <span style="color:var(--cyan-glow);">Est. Population Impacted: <b>64,200 Citizens</b></span>
+        <span style="color:var(--risk-crit);">Priority Action: <b>Ration Agricultural Power Pumping</b></span>
+      </div>
+    </div>
+
+    <!-- Active Alerts Grid -->
+    <h3 style="font-size:18px; margin-bottom:14px;">National Hotspot Surveillance Feed</h3>
+    <div style="display:grid; grid-template-columns:repeat(3, 1fr); gap:16px;" id="alertsGrid">
+      <!-- Sangrur -->
+      <div class="glass-card" style="border-left:4px solid var(--risk-crit);">
+        <div style="display:flex; justify-content:space-between;">
+          <b>Sangrur, Punjab</b>
+          <span class="risk-badge crit">Critical</span>
+        </div>
+        <div style="font-size:12.5px; color:var(--text-secondary); margin-top:8px;">
+          Paddy tubewell drawdowns accelerating. Deep unconfined aquifer water level at 28.5 mbgl. Predicted 1.2m further decline by May.
+        </div>
+        <div class="mono" style="font-size:11px; color:var(--text-tertiary); margin-top:10px;">Contributing Factor: 172% Extraction Ratio</div>
+      </div>
+
+      <!-- Jodhpur -->
+      <div class="glass-card" style="border-left:4px solid var(--risk-crit);">
+        <div style="display:flex; justify-content:space-between;">
+          <b>Jodhpur, Rajasthan</b>
+          <span class="risk-badge crit">Critical</span>
+        </div>
+        <div style="font-size:12.5px; color:var(--text-secondary); margin-top:8px;">
+          Deep fossil sandstone reserves depleting. Average tubewell depth exceeded 46m. 14 rural habitations facing acute drinking water shortage.
+        </div>
+        <div class="mono" style="font-size:11px; color:var(--text-tertiary); margin-top:10px;">Contributing Factor: -36% Rainfall Deficit</div>
+      </div>
+
+      <!-- Kolar -->
+      <div class="glass-card" style="border-left:4px solid var(--risk-crit);">
+        <div style="display:flex; justify-content:space-between;">
+          <b>Kolar, Karnataka</b>
+          <span class="risk-badge crit">Critical</span>
+        </div>
+        <div style="font-size:12.5px; color:var(--text-secondary); margin-top:8px;">
+          Hard rock crystalline fracture systems exhausted. Borewells drilled past 1,200 ft yielding dry silt. Emergency tanker routing required.
+        </div>
+        <div class="mono" style="font-size:11px; color:var(--text-tertiary); margin-top:10px;">Contributing Factor: 186.5% Extraction Ratio</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= 6. ACTION CENTER ================= -->
+  <section class="module-view" id="view-action">
+    <div class="section-header">
+      <span class="section-eyebrow">Practical Scientific Interventions</span>
+      <h2 class="section-title">Action Center</h2>
+      <p class="section-subtitle">Tailored engineering, agronomic, and policy interventions designed to stabilize depleted aquifers and protect agrarian livelihoods.</p>
+    </div>
+
+    <!-- Category Tabs -->
+    <div class="action-tabs-grid">
+      <div class="action-tab-card active" onclick="switchActionCategory('recharge', this)">
+        <div class="action-tab-icon">💧</div>
+        <div class="action-tab-title">Groundwater Recharge</div>
+        <div style="font-size:11px; color:var(--text-secondary); margin-top:4px;">Managed Aquifer Recharge (MAR)</div>
+      </div>
+
+      <div class="action-tab-card" onclick="switchActionCategory('harvest', this)">
+        <div class="action-tab-icon">🌧️</div>
+        <div class="action-tab-title">Rainwater Harvesting</div>
+        <div style="font-size:11px; color:var(--text-secondary); margin-top:4px;">Farm ponds & catchment basins</div>
+      </div>
+
+      <div class="action-tab-card" onclick="switchActionCategory('irrigation', this)">
+        <div class="action-tab-icon">🌾</div>
+        <div class="action-tab-title">Irrigation Optimization</div>
+        <div style="font-size:11px; color:var(--text-secondary); margin-top:4px;">Micro-irrigation & sensor valves</div>
+      </div>
+
+      <div class="action-tab-card" onclick="switchActionCategory('crops', this)">
+        <div class="action-tab-icon">🌱</div>
+        <div class="action-tab-title">Crop Planning</div>
+        <div style="font-size:11px; color:var(--text-secondary); margin-top:4px;">Low-water crop substitution</div>
+      </div>
+    </div>
+
+    <!-- Action Details Card -->
+    <div class="glass-card" id="actionContentPanel">
+      <!-- Injected via JavaScript -->
+    </div>
+  </section>
+
+  <!-- ================= 7. WHAT-IF SIMULATOR ================= -->
+  <section class="module-view" id="view-sim">
+    <div class="section-header">
+      <span class="section-eyebrow">Interactive Hydrogeological Sandbox</span>
+      <h2 class="section-title">What-If Scenario Simulator</h2>
+      <p class="section-subtitle">Test how climate anomalies, crop diversification, and artificial recharge shift future groundwater vulnerability in real time.</p>
+    </div>
+
+    <div class="sim-container">
+      <!-- Sliders Panel -->
+      <div class="glass-card">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:18px;">
+          <h3>Scenario Controls</h3>
+          <button class="btn-glass" style="font-size:12px; padding:6px 14px;" onclick="resetSimulationControls()">Reset to Actual Baseline</button>
+        </div>
+
+        <div class="sim-slider-row">
+          <div class="sim-slider-head">
+            <span>🌧️ Rainfall Anomaly (%)</span>
+            <span class="mono" id="simValRain" style="color:var(--cyan-glow); font-weight:700;">-20%</span>
+          </div>
+          <input type="range" id="simSlideRain" min="-50" max="50" value="-20" oninput="executeScenarioSimulation()">
+          <div style="display:flex; justify-content:space-between; font-size:10px; color:var(--text-tertiary); margin-top:3px;">
+            <span>-50% (Severe Drought)</span>
+            <span>0% (Normal)</span>
+            <span>+50% (Surplus Monsoon)</span>
+          </div>
+        </div>
+
+        <div class="sim-slider-row">
+          <div class="sim-slider-head">
+            <span>⚡ Groundwater Extraction Load (%)</span>
+            <span class="mono" id="simValExtract" style="color:var(--risk-mod); font-weight:700;">140%</span>
+          </div>
+          <input type="range" id="simSlideExtract" min="30" max="220" value="140" oninput="executeScenarioSimulation()">
+          <div style="display:flex; justify-content:space-between; font-size:10px; color:var(--text-tertiary); margin-top:3px;">
+            <span>30% (Regulated)</span>
+            <span>100% (Balanced)</span>
+            <span>220% (Heavy Overdraft)</span>
+          </div>
+        </div>
+
+        <div class="sim-slider-row">
+          <div class="sim-slider-head">
+            <span>🌡️ Temperature Anomaly (+°C)</span>
+            <span class="mono" id="simValTemp" style="color:var(--risk-high); font-weight:700;">+1.5°C</span>
+          </div>
+          <input type="range" id="simSlideTemp" min="-10" max="40" value="15" oninput="executeScenarioSimulation()">
+          <div style="display:flex; justify-content:space-between; font-size:10px; color:var(--text-tertiary); margin-top:3px;">
+            <span>-1.0°C</span>
+            <span>+1.5°C</span>
+            <span>+4.0°C (Extreme Heatwave)</span>
+          </div>
+        </div>
+
+        <div class="sim-slider-row">
+          <div class="sim-slider-head">
+            <span>🌾 Shift to Low-Water Nutri-Cereals / Millets (%)</span>
+            <span class="mono" id="simValCrop" style="color:var(--risk-low); font-weight:700;">25%</span>
+          </div>
+          <input type="range" id="simSlideCrop" min="0" max="100" value="25" oninput="executeScenarioSimulation()">
+          <div style="display:flex; justify-content:space-between; font-size:10px; color:var(--text-tertiary); margin-top:3px;">
+            <span>0% (Status Quo Paddy)</span>
+            <span>50%</span>
+            <span>100% (Full Climate Adaptation)</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Simulation Outcome Panel -->
+      <div>
+        <div class="sim-outcome-panel">
+          <span class="section-eyebrow">Simulated Hydrogeological Impact</span>
+          <div style="display:flex; justify-content:space-between; align-items:baseline; margin-top:8px;">
+            <div class="stat-num mono" id="simResultScore" style="font-size:48px; color:var(--risk-crit);">84%</div>
+            <span class="risk-badge crit" id="simResultBadge"><span class="badge-pip"></span> Critical Risk</span>
+          </div>
+
+          <div style="margin-top:16px; padding:16px; background:rgba(0,0,0,0.3); border-radius:var(--radius-sm); border:1px solid var(--line);">
+            <div style="font-size:13px; font-weight:600; margin-bottom:4px;">Diagnostic Synthesis:</div>
+            <div style="font-size:12.5px; color:var(--text-secondary); line-height:1.6;" id="simResultNarrative">
+              Under a <b>20% rainfall deficit</b> combined with <b>140% extraction</b>, the local static reserve will be depleted 42 days earlier than the historical average. However, the <b>25% crop shift to millets</b> conserves approximately 180 MCM of dynamic groundwater!
+            </div>
+          </div>
+
+          <div style="display:grid; grid-template-columns:repeat(2, 1fr); gap:12px; margin-top:20px;">
+            <div class="horizon-card">
+              <div class="horizon-label">Days to Critical Drawdown</div>
+              <div class="horizon-val mono" id="simDaysLeft" style="color:var(--risk-high);">74 Days</div>
+              <div class="horizon-meta">Before pump intake dries</div>
+            </div>
+
+            <div class="horizon-card">
+              <div class="horizon-label">Net Volumetric Balance</div>
+              <div class="horizon-val mono" id="simNetMCM" style="color:var(--risk-crit);">-240 MCM</div>
+              <div class="horizon-meta">Annual Deficit</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<!-- Footer -->
+<footer>
+  <div class="container">
+    <div class="footer-grid">
+      <div>
+        <div class="brand" style="margin-bottom:12px;">
+          <div class="brand-icon">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+              <path d="M12 2.2C12 2.2 4.5 11.8 4.5 16.8C4.5 21 7.9 23.5 12 23.5C16.1 23.5 19.5 21 19.5 16.8C19.5 11.8 12 2.2 12 2.2Z" stroke="#00F0FF" stroke-width="2"/>
+            </svg>
+          </div>
+          <div class="brand-title">Bhoomi<span>Jal</span></div>
+        </div>
+        <p style="max-width:380px; line-height:1.65; color:var(--text-secondary);">
+          Next-generation hydrogeological surveillance & predictive early-warning platform. Grounded in Central Ground Water Board (CGWB) GEC-2015 methodologies, IMD gridded precipitation, and physics-guided machine learning.
+        </p>
+      </div>
+
+      <div>
+        <div style="font-family:'IBM Plex Mono'; font-size:11px; text-transform:uppercase; color:var(--text-primary); margin-bottom:12px;">Intelligence Modules</div>
+        <div style="display:flex; flex-direction:column; gap:8px;">
+          <a href="javascript:void(0)" onclick="switchNavModule('landing')">3D Groundwater Stratum</a>
+          <a href="javascript:void(0)" onclick="switchNavModule('map')">Groundwater Intelligence Map</a>
+          <a href="javascript:void(0)" onclick="switchNavModule('predict')">Prediction Hub</a>
+          <a href="javascript:void(0)" onclick="switchNavModule('ai')">Explainable AI Drivers</a>
+          <a href="javascript:void(0)" onclick="switchNavModule('warning')">Early-Warning Center</a>
+          <a href="javascript:void(0)" onclick="switchNavModule('action')">Action & Crop Center</a>
+          <a href="javascript:void(0)" onclick="switchNavModule('sim')">What-If Simulator</a>
+        </div>
+      </div>
+
+      <div>
+        <div style="font-family:'IBM Plex Mono'; font-size:11px; text-transform:uppercase; color:var(--text-primary); margin-bottom:12px;">Institutional Telemetry</div>
+        <div style="display:flex; flex-direction:column; gap:8px;">
+          <span>Central Ground Water Board (CGWB)</span>
+          <span>India-WRIS Automated Piezometer Grid</span>
+          <span>India Meteorological Department (IMD)</span>
+          <span>Ministry of Jal Shakti, Government of India</span>
+        </div>
+      </div>
+    </div>
+
+    <div style="display:flex; justify-content:space-between; flex-wrap:wrap; gap:10px; padding-top:20px; border-top:1px solid var(--line); font-size:11.5px;">
+      <span>© 2026 BhoomiJal Platform · National Hydrological Intelligence Initiative</span>
+      <span class="mono">Engineered for Antigravity · Verified with CGWB GEC-2015 Standards</span>
+    </div>
+  </div>
+</footer>
+
+<!-- SCRIPT: APPLICATION ENGINE, 3D WEBGL, MAP & CHARTS -->
+<script>
+/* =========================================================================
+   1. REAL CGWB NATIONAL DATASET WITH HIERARCHICAL DRILL-DOWN (STATE -> DISTRICT -> MANDAL)
+   ========================================================================= */
+
+const GROUNDWATER_DATABASE = [
+  {
+    id: "ravipadu",
+    name: "Ravipadu",
+    mandal: "Narasaraopet",
+    district: "Palnadu",
+    state: "Andhra Pradesh",
+    lat: 16.2361,
+    lng: 80.0528,
+    tier: "Critical",
+    score: 86,
+    depth: 24.8,
+    soe: 94.2,
+    decline: 0.82,
+    recharge: 320,
+    extract: 301,
+    rainDeficit: 24,
+    tempAnomaly: 1.9,
+    formation: "Limestone & Crystalline Gneiss",
+    past: [71, 74, 78, 81, 84, 86],
+    forecast: [86, 88, 92, 95],
+    alertText: "Severe pre-summer drawdown. Commercial chili borewells facing yield drops >40%."
+  },
+  {
+    id: "sangrur",
+    name: "Sangrur",
+    mandal: "Bhawanigarh",
+    district: "Sangrur",
+    state: "Punjab",
+    lat: 30.2458,
+    lng: 75.8421,
+    tier: "Critical",
+    score: 89,
+    depth: 28.5,
+    soe: 172.4,
+    decline: 0.85,
+    recharge: 1480,
+    extract: 2296,
+    rainDeficit: 28,
+    tempAnomaly: 2.1,
+    formation: "Indo-Gangetic Alluvium",
+    past: [74, 78, 82, 85, 87, 89],
+    forecast: [89, 92, 95, 98],
+    alertText: "Centrifugal pumps losing suction head. Intensive summer paddy drafting."
+  },
+  {
+    id: "jodhpur",
+    name: "Jodhpur",
+    mandal: "Bilara",
+    district: "Jodhpur",
+    state: "Rajasthan",
+    lat: 26.2389,
+    lng: 73.0243,
+    tier: "Critical",
+    score: 94,
+    depth: 46.8,
+    soe: 198.6,
+    decline: 0.92,
+    recharge: 312,
+    extract: 618,
+    rainDeficit: 36,
+    tempAnomaly: 2.4,
+    formation: "Sandstone & Arid Alluvium",
+    past: [80, 84, 87, 90, 92, 94],
+    forecast: [94, 96, 98, 100],
+    alertText: "Mining non-replenishable static storage. Borewells exceed 140m."
+  },
+  {
+    id: "kolar",
+    name: "Kolar",
+    mandal: "Bangarapet",
+    district: "Kolar",
+    state: "Karnataka",
+    lat: 13.1372,
+    lng: 78.1289,
+    tier: "Critical",
+    score: 91,
+    depth: 55.4,
+    soe: 186.5,
+    decline: 1.15,
+    recharge: 245,
+    extract: 456,
+    rainDeficit: 18,
+    tempAnomaly: 1.6,
+    formation: "Granite & Hard Gneiss",
+    past: [76, 80, 84, 87, 89, 91],
+    forecast: [91, 93, 96, 98],
+    alertText: "Deep hard rock fracture collapse. Public drinking RO plants threatened."
+  },
+  {
+    id: "latur",
+    name: "Latur",
+    mandal: "Ausa",
+    district: "Latur",
+    state: "Maharashtra",
+    lat: 18.4088,
+    lng: 76.5604,
+    tier: "High",
+    score: 68,
+    depth: 16.8,
+    soe: 94.6,
+    decline: 0.48,
+    recharge: 810,
+    extract: 761,
+    rainDeficit: 24,
+    tempAnomaly: 1.7,
+    formation: "Deccan Basaltic Traps",
+    past: [52, 56, 61, 64, 66, 68],
+    forecast: [68, 71, 75, 78],
+    alertText: "Thin basalt weathered zone rapidly desiccating post-rabi harvest."
+  },
+  {
+    id: "mehsana",
+    name: "Mehsana",
+    mandal: "Kadi",
+    district: "Mehsana",
+    state: "Gujarat",
+    lat: 23.5880,
+    lng: 72.3693,
+    tier: "Critical",
+    score: 84,
+    depth: 42.0,
+    soe: 148.3,
+    decline: 0.74,
+    recharge: 720,
+    extract: 1065,
+    rainDeficit: 26,
+    tempAnomaly: 1.8,
+    formation: "Alluvial Semi-Confined",
+    past: [70, 74, 78, 80, 82, 84],
+    forecast: [84, 87, 89, 92],
+    alertText: "Heavy extraction for dairy fodder; salinity ingress detected in deep aquifers."
+  },
+  {
+    id: "coimbatore",
+    name: "Coimbatore",
+    mandal: "Sulur",
+    district: "Coimbatore",
+    state: "Tamil Nadu",
+    lat: 11.0168,
+    lng: 76.9558,
+    tier: "High",
+    score: 78,
+    depth: 32.6,
+    soe: 132.8,
+    decline: 0.58,
+    recharge: 410,
+    extract: 541,
+    rainDeficit: 15,
+    tempAnomaly: 1.3,
+    formation: "Charnockite & Gneiss",
+    past: [65, 68, 72, 75, 76, 78],
+    forecast: [78, 81, 84, 86],
+    alertText: "High combined textile industrial draw and coconut plantation pumping."
+  },
+  {
+    id: "beed",
+    name: "Beed",
+    mandal: "Ashti",
+    district: "Beed",
+    state: "Maharashtra",
+    lat: 18.9891,
+    lng: 75.7601,
+    tier: "Moderate",
+    score: 54,
+    depth: 12.6,
+    soe: 84.1,
+    decline: 0.31,
+    recharge: 790,
+    extract: 664,
+    rainDeficit: 21,
+    tempAnomaly: 1.5,
+    formation: "Deccan Basalt",
+    past: [42, 45, 48, 50, 52, 54],
+    forecast: [54, 57, 60, 62],
+    alertText: "Moderate stress buffered by seasonal tank infiltration."
+  },
+  {
+    id: "vidisha",
+    name: "Vidisha",
+    mandal: "Basoda",
+    district: "Vidisha",
+    state: "Madhya Pradesh",
+    lat: 23.5251,
+    lng: 77.8081,
+    tier: "Moderate",
+    score: 48,
+    depth: 11.8,
+    soe: 79.3,
+    decline: 0.26,
+    recharge: 920,
+    extract: 727,
+    rainDeficit: 14,
+    tempAnomaly: 1.2,
+    formation: "Basalt & Vindhyan Sandstone",
+    past: [38, 41, 44, 46, 47, 48],
+    forecast: [48, 51, 54, 56],
+    alertText: "Rabi wheat irrigation causing expected seasonal drawdown."
+  },
+  {
+    id: "wayanad",
+    name: "Wayanad",
+    mandal: "Vythiri",
+    district: "Wayanad",
+    state: "Kerala",
+    lat: 11.6854,
+    lng: 76.1320,
+    tier: "Low",
+    score: 16,
+    depth: 5.2,
+    soe: 28.1,
+    decline: -0.05,
+    recharge: 410,
+    extract: 115,
+    rainDeficit: -4,
+    tempAnomaly: 0.4,
+    formation: "Weathered Hornblende Gneiss",
+    past: [15, 15, 16, 16, 16, 16],
+    forecast: [16, 17, 18, 19],
+    alertText: "Aquifer stable with healthy precipitation and spring replenishment."
+  },
+  {
+    id: "eastgodavari",
+    name: "East Godavari",
+    mandal: "Rajahmundry",
+    district: "East Godavari",
+    state: "Andhra Pradesh",
+    lat: 17.0005,
+    lng: 81.8040,
+    tier: "Low",
+    score: 24,
+    depth: 4.8,
+    soe: 42.0,
+    decline: 0.08,
+    recharge: 2150,
+    extract: 903,
+    rainDeficit: 5,
+    tempAnomaly: 0.8,
+    formation: "Deltaic Coastal Alluvium",
+    past: [21, 22, 23, 23, 24, 24],
+    forecast: [24, 25, 27, 28],
+    alertText: "Perennial Godavari river network continuously recharging shallow aquifers."
+  }
+];
+
+let activeBlock = GROUNDWATER_DATABASE[0]; // Default: Ravipadu
+
+/* =========================================================================
+   2. THREE.JS 3D GROUNDWATER SUBTERRANEAN AQUIFER VISUAL
+   A realistic, interactive 3D volumetric cross-section of the earth:
+   - Surface terrain with vegetation, borewell rig, and rain clouds
+   - Vadose unsaturated zone
+   - Luminous Water Table Surface (responds live to Simulator!)
+   - Saturated unconfined aquifer with particle percolation flow
+   - Solid impermeable bedrock foundation
+   ========================================================================= */
+
+let scene, camera, renderer, controls;
+let waterTableMesh, aquiferParticles, terrainMesh, wellCasing;
+
+function init3DGroundwaterVisual() {
+  const container = document.querySelector('.canvas-3d-box');
+  const canvas = document.getElementById('groundwater3DCanvas');
+  if (!canvas) return;
+
+  const width = container.clientWidth;
+  const height = container.clientHeight;
+
+  scene = new THREE.Scene();
+  scene.background = new THREE.Color(0x061117);
+
+  camera = new THREE.PerspectiveCamera(45, width / height, 0.1, 1000);
+  camera.position.set(28, 22, 28);
+
+  renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true, alpha: true });
+  renderer.setSize(width, height);
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  renderer.shadowMap.enabled = true;
+
+  controls = new THREE.OrbitControls(camera, renderer.domElement);
+  controls.enableDamping = true;
+  controls.dampingFactor = 0.05;
+  controls.maxPolarAngle = Math.PI / 2.1; // Don't look under the base
+  controls.minDistance = 15;
+  controls.maxDistance = 50;
+
+  // Lights
+  const ambientLight = new THREE.AmbientLight(0xD8F3FF, 0.75);
+  scene.add(ambientLight);
+
+  const dirLight = new THREE.DirectionalLight(0x00F0FF, 1.2);
+  dirLight.position.set(20, 40, 20);
+  dirLight.castShadow = true;
+  scene.add(dirLight);
+
+  const underLight = new THREE.PointLight(0x0284C7, 1.8, 40);
+  underLight.position.set(0, -6, 0);
+  scene.add(underLight);
+
+  // Geological Stratum Block (Width: 20, Depth: 20)
+  build3DGeologicalBlock();
+
+  // Resize handler
+  window.addEventListener('resize', () => {
+    if (!container) return;
+    const w = container.clientWidth;
+    const h = container.clientHeight;
+    camera.aspect = w / h;
+    camera.updateProjectionMatrix();
+    renderer.setSize(w, h);
+  });
+
+  animate3D();
+}
+
+function build3DGeologicalBlock() {
+  const group = new THREE.Group();
+
+  // 1. Bedrock Base Layer (Dark Granite / Basalt)
+  const bedrockGeo = new THREE.BoxGeometry(20, 4, 20);
+  const bedrockMat = new THREE.MeshStandardMaterial({
+    color: 0x1A262C,
+    roughness: 0.9,
+    metalness: 0.2
+  });
+  const bedrock = new THREE.Mesh(bedrockGeo, bedrockMat);
+  bedrock.position.y = -8;
+  group.add(bedrock);
+
+  // 2. Unsaturated Upper Soil / Vadose Zone (Porous Silt)
+  const soilGeo = new THREE.BoxGeometry(20, 6, 20);
+  const soilMat = new THREE.MeshStandardMaterial({
+    color: 0x4E3629,
+    roughness: 0.85,
+    transparent: true,
+    opacity: 0.75
+  });
+  const soil = new THREE.Mesh(soilGeo, soilMat);
+  soil.position.y = 3;
+  group.add(soil);
+
+  // 3. Surface Vegetation Top Plate (Farms & Topsoil)
+  const topGeo = new THREE.BoxGeometry(20.4, 0.8, 20.4);
+  const topMat = new THREE.MeshStandardMaterial({
+    color: 0x1B4D2E,
+    roughness: 0.7
+  });
+  const topPlate = new THREE.Mesh(topGeo, topMat);
+  topPlate.position.y = 6.4;
+  group.add(topPlate);
+
+  // Add low-poly farm structures & trees on surface
+  for (let i = 0; i < 8; i++) {
+    const treeTrunk = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.16, 1.2), new THREE.MeshBasicMaterial({ color: 0x5D4037 }));
+    const treeLeaves = new THREE.Mesh(new THREE.ConeGeometry(0.8, 1.8, 5), new THREE.MeshStandardMaterial({ color: 0x2E7D32 }));
+    treeTrunk.position.set((Math.random() - 0.5) * 16, 7.0, (Math.random() - 0.5) * 16);
+    treeLeaves.position.set(treeTrunk.position.x, 8.1, treeTrunk.position.z);
+    group.add(treeTrunk);
+    group.add(treeLeaves);
+  }
+
+  // 4. Luminous Groundwater Table (Undulating Water Horizon Plane)
+  const waterGeo = new THREE.BoxGeometry(20.2, 0.5, 20.2);
+  const waterMat = new THREE.MeshStandardMaterial({
+    color: 0x00F0FF,
+    emissive: 0x00A3C4,
+    emissiveIntensity: 0.6,
+    roughness: 0.1,
+    transparent: true,
+    opacity: 0.88
+  });
+  waterTableMesh = new THREE.Mesh(waterGeo, waterMat);
+  waterTableMesh.position.y = 0; // Default water table height
+  group.add(waterTableMesh);
+
+  // 5. Deep Saturated Aquifer Body (Glows beneath water table)
+  const satGeo = new THREE.BoxGeometry(20, 6, 20);
+  const satMat = new THREE.MeshStandardMaterial({
+    color: 0x0369A1,
+    emissive: 0x0284C7,
+    emissiveIntensity: 0.25,
+    transparent: true,
+    opacity: 0.55
+  });
+  const saturatedBody = new THREE.Mesh(satGeo, satMat);
+  saturatedBody.position.y = -3;
+  group.add(saturatedBody);
+
+  // 6. Tube-well Shaft Drilling Pipe (Puncturing the aquifer)
+  const pipeGeo = new THREE.CylinderGeometry(0.35, 0.35, 14, 16);
+  const pipeMat = new THREE.MeshStandardMaterial({ color: 0x94A3B8, metalness: 0.8, roughness: 0.2 });
+  wellCasing = new THREE.Mesh(pipeGeo, pipeMat);
+  wellCasing.position.set(2, 0, 2);
+  group.add(wellCasing);
+
+  // 7. Animated Water Percolation Particle Matrix
+  const pCount = 200;
+  const pGeo = new THREE.BufferGeometry();
+  const pPos = new Float32Array(pCount * 3);
+  for (let i = 0; i < pCount * 3; i += 3) {
+    pPos[i] = (Math.random() - 0.5) * 18;
+    pPos[i + 1] = Math.random() * 8 - 5;
+    pPos[i + 2] = (Math.random() - 0.5) * 18;
+  }
+  pGeo.setAttribute('position', new THREE.BufferAttribute(pPos, 3));
+  const pMat = new THREE.PointsMaterial({ color: 0x38BDF8, size: 0.25, transparent: true, opacity: 0.75 });
+  aquiferParticles = new THREE.Points(pGeo, pMat);
+  group.add(aquiferParticles);
+
+  scene.add(group);
+}
+
+function animate3D() {
+  requestAnimationFrame(animate3D);
+
+  if (controls) controls.update();
+
+  // Subtle wave breathing of the water table
+  if (waterTableMesh) {
+    const time = Date.now() * 0.002;
+    waterTableMesh.scale.x = 1 + Math.sin(time) * 0.005;
+    waterTableMesh.scale.z = 1 + Math.cos(time) * 0.005;
+  }
+
+  // Animate percolation particles trickling down
+  if (aquiferParticles) {
+    const positions = aquiferParticles.geometry.attributes.position.array;
+    for (let i = 1; i < positions.length; i += 3) {
+      positions[i] -= 0.035;
+      if (positions[i] < -6) {
+        positions[i] = 4;
+      }
+    }
+    aquiferParticles.geometry.attributes.position.needsUpdate = true;
+  }
+
+  if (renderer && scene && camera) {
+    renderer.render(scene, camera);
+  }
+}
+
+// Function to update 3D Water Table visually from Simulator or selected profile
+function update3DWaterTableLevel(normScore) {
+  if (!waterTableMesh) return;
+  // Score 0 (Safe) -> height = 2.0; Score 100 (Critical Dry) -> height = -3.5
+  const targetY = 2.0 - (normScore / 100) * 5.5;
+  waterTableMesh.position.y = targetY;
+
+  // Color shift: Teal (Safe) -> Amber (Mod) -> Red (Crit)
+  if (normScore > 80) {
+    waterTableMesh.material.color.setHex(0xEF4444);
+    waterTableMesh.material.emissive.setHex(0xB91C1C);
+  } else if (normScore > 60) {
+    waterTableMesh.material.color.setHex(0xF97316);
+    waterTableMesh.material.emissive.setHex(0xC2410C);
+  } else if (normScore > 35) {
+    waterTableMesh.material.color.setHex(0xF59E0B);
+    waterTableMesh.material.emissive.setHex(0xB45309);
+  } else {
+    waterTableMesh.material.color.setHex(0x00F0FF);
+    waterTableMesh.material.emissive.setHex(0x00A3C4);
+  }
+}
+
+/* =========================================================================
+   3. NAVIGATION MODULE SWITCHING
+   ========================================================================= */
+
+function switchNavModule(modId) {
+  document.querySelectorAll('section.module-view').forEach(v => v.classList.remove('active'));
+  const target = document.getElementById('view-' + modId);
+  if (target) target.classList.add('active');
+
+  document.querySelectorAll('#mainNavTabs button, .mobile-nav-strip button').forEach(b => {
+    b.classList.toggle('active', b.getAttribute('data-mod') === modId);
+  });
+
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+
+  if (modId === 'map' && map) {
+    setTimeout(() => map.invalidateSize(), 150);
+  }
+  if (modId === 'predict') {
+    setTimeout(() => {
+      if (predictionChart) predictionChart.resize();
+      if (pieChart) pieChart.resize();
+    }, 150);
+  }
+  if (modId === 'ai') {
+    setTimeout(() => {
+      if (radarChart) radarChart.resize();
+    }, 150);
+  }
+}
+
+/* =========================================================================
+   4. MAP VIEW & HIERARCHICAL DRILL-DOWN (STATE -> DISTRICT -> MANDAL)
+   ========================================================================= */
+
+let map, mapMarkers = {};
+
+function initLeafletMap() {
+  map = L.map('map', { scrollWheelZoom: false }).setView([20.5, 78.9], 5);
+
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+    attribution: '&copy; OpenStreetMap &copy; CARTO',
+    subdomains: 'abcd',
+    maxZoom: 12
+  }).addTo(map);
+
+  populateStateDropdown();
+  renderMapMarkers(GROUNDWATER_DATABASE);
+  renderMapProfilesSidebar(GROUNDWATER_DATABASE);
+}
+
+function getTierDetails(score) {
+  if (score >= 81) return { label: "Critical", class: "crit", color: "#EF4444" };
+  if (score >= 61) return { label: "High", class: "high", color: "#F97316" };
+  if (score >= 31) return { label: "Moderate", class: "mod", color: "#F59E0B" };
+  return { label: "Low", class: "low", color: "#10B981" };
+}
+
+function renderMapMarkers(data) {
+  // Clear old markers
+  Object.values(mapMarkers).forEach(m => map.removeLayer(m));
+  mapMarkers = {};
+
+  data.forEach(loc => {
+    const tier = getTierDetails(loc.score);
+    const radius = 9 + (loc.score / 100) * 8;
+
+    const marker = L.circleMarker([loc.lat, loc.lng], {
+      radius: radius,
+      fillColor: tier.color,
+      color: tier.color,
+      weight: 1.5,
+      fillOpacity: 0.65
+    }).addTo(map);
+
+    const popup = `
+      <div style="font-family:'Plus Jakarta Sans',sans-serif; color:#0A1317; min-width:180px;">
+        <h4 style="margin:0 0 2px 0; color:#0A1317; font-size:15px; font-weight:700;">${loc.name}, ${loc.district}</h4>
+        <div style="font-size:11px; color:#55666C; margin-bottom:6px;">${loc.state} · ${loc.formation}</div>
+        <div style="display:flex; justify-content:space-between; margin-bottom:4px; font-size:12px;">
+          <span>Risk Status:</span> <b style="color:${tier.color};">${tier.label} (${loc.score}%)</b>
+        </div>
+        <div style="display:flex; justify-content:space-between; margin-bottom:4px; font-size:12px;">
+          <span>Extraction (SOE):</span> <b>${loc.soe}%</b>
+        </div>
+        <div style="display:flex; justify-content:space-between; margin-bottom:8px; font-size:12px;">
+          <span>Depth:</span> <b>${loc.depth} mbgl</b>
+        </div>
+        <button onclick="selectProfileAndNavigate('${loc.id}')" style="width:100%; background:#0C1A20; color:#00F0FF; border:1px solid #00F0FF; padding:6px; border-radius:4px; font-size:11.5px; font-weight:700; cursor:pointer;">
+          Open Groundwater Profile →
+        </button>
+      </div>
+    `;
+
+    marker.bindPopup(popup);
+    mapMarkers[loc.id] = marker;
+  });
+}
+
+function renderMapProfilesSidebar(data) {
+  const container = document.getElementById('mapProfilesSidebar');
+  container.innerHTML = "";
+  document.getElementById('mapProfileCount').textContent = `${data.length} Units Loaded`;
+
+  const sorted = [...data].sort((a, b) => b.score - a.score);
+
+  sorted.forEach(loc => {
+    const tier = getTierDetails(loc.score);
+    const card = document.createElement('div');
+    card.className = "profile-mini-card";
+    card.innerHTML = `
+      <div>
+        <div class="pmc-name">${loc.name}</div>
+        <div class="pmc-sub">${loc.district}, ${loc.state} · ${loc.mandal} Mandal</div>
+      </div>
+      <div style="text-align:right;">
+        <div class="pmc-score" style="color:${tier.color};">${loc.score}%</div>
+        <span class="risk-badge ${tier.class}" style="font-size:9.5px; padding:2px 6px;">${tier.label}</span>
+      </div>
+    `;
+    card.onclick = () => {
+      map.setView([loc.lat, loc.lng], 9, { animate: true });
+      mapMarkers[loc.id].openPopup();
+      selectProfileAndNavigate(loc.id, false);
+    };
+    container.appendChild(card);
+  });
+}
+
+function populateStateDropdown() {
+  const stateSel = document.getElementById('mapStateSelect');
+  const states = [...new Set(GROUNDWATER_DATABASE.map(l => l.state))].sort();
+  stateSel.innerHTML = '<option value="all">All States (National View)</option>';
+  states.forEach(s => {
+    const opt = document.createElement('option');
+    opt.value = s; opt.textContent = s;
+    stateSel.appendChild(opt);
+  });
+}
+
+function onStateSelected(state) {
+  const distSel = document.getElementById('mapDistrictSelect');
+  distSel.innerHTML = '<option value="all">All Districts</option>';
+
+  if (state === 'all') {
+    renderMapMarkers(GROUNDWATER_DATABASE);
+    renderMapProfilesSidebar(GROUNDWATER_DATABASE);
+    map.setView([20.5, 78.9], 5);
+    return;
+  }
+
+  const inState = GROUNDWATER_DATABASE.filter(l => l.state === state);
+  const districts = [...new Set(inState.map(l => l.district))].sort();
+  districts.forEach(d => {
+    const opt = document.createElement('option');
+    opt.value = d; opt.textContent = d;
+    distSel.appendChild(opt);
+  });
+
+  filterMapMarkers();
+
+  // Focus map on first location in state
+  if (inState.length > 0) {
+    map.setView([inState[0].lat, inState[0].lng], 7);
+  }
+}
+
+function onDistrictSelected(dist) {
+  filterMapMarkers();
+}
+
+function filterMapMarkers() {
+  const state = document.getElementById('mapStateSelect').value;
+  const dist = document.getElementById('mapDistrictSelect').value;
+  const tier = document.getElementById('mapTierFilter').value;
+
+  const filtered = GROUNDWATER_DATABASE.filter(l => {
+    const matchState = (state === 'all') || (l.state === state);
+    const matchDist = (dist === 'all') || (l.district === dist);
+    const matchTier = (tier === 'all') || (getTierDetails(l.score).label === tier);
+    return matchState && matchDist && matchTier;
+  });
+
+  renderMapMarkers(filtered);
+  renderMapProfilesSidebar(filtered);
+}
+
+function selectProfileAndNavigate(id, switchTab = true) {
+  const found = GROUNDWATER_DATABASE.find(l => l.id === id);
+  if (!found) return;
+  activeBlock = found;
+
+  document.getElementById('predictBlockSelect').value = found.id;
+  loadPredictionProfile(found.id);
+  updateAIAnalysisDrivers(found);
+  update3DWaterTableLevel(found.score);
+
+  if (switchTab) {
+    switchNavModule('predict');
+  }
+}
+
+/* =========================================================================
+   5. PREDICTION DASHBOARD & HISTORICAL VS PREDICTED TRENDS
+   ========================================================================= */
+
+let predictionChart, pieChart;
+
+function initPredictionDropdown() {
+  const select = document.getElementById('predictBlockSelect');
+  select.innerHTML = "";
+  GROUNDWATER_DATABASE.forEach(l => {
+    const opt = document.createElement('option');
+    opt.value = l.id;
+    opt.textContent = `${l.name} (${l.district}, ${l.state}) — ${l.tier}`;
+    select.appendChild(opt);
+  });
+  loadPredictionProfile(activeBlock.id);
+}
+
+function loadPredictionProfile(locId) {
+  const loc = GROUNDWATER_DATABASE.find(l => l.id === locId) || activeBlock;
+  activeBlock = loc;
+  const tier = getTierDetails(loc.score);
+
+  document.getElementById('predictUnitTitle').textContent = `${loc.name}, ${loc.district} (${loc.state})`;
+  document.getElementById('predictUnitMeta').textContent = `Mandal: ${loc.mandal} · Formation: ${loc.formation} · Recorded Water Depth: ${loc.depth} mbgl`;
+  document.getElementById('predictUnitScore').textContent = `${loc.score}%`;
+  document.getElementById('predictUnitScore').style.color = tier.color;
+
+  const badge = document.getElementById('predictUnitTier');
+  badge.className = `risk-badge ${tier.class}`;
+  badge.innerHTML = `<span class="badge-pip"></span> ${tier.label} Risk`;
+
+  // Horizons
+  document.getElementById('horCurrent').textContent = `${loc.depth} m`;
+  document.getElementById('hor1Mo').textContent = `${(loc.depth + 0.8).toFixed(1)} m`;
+  document.getElementById('hor3Mo').textContent = `${(loc.depth + 2.4).toFixed(1)} m`;
+  document.getElementById('hor6Mo').textContent = `${(loc.depth + 4.6).toFixed(1)} m`;
+
+  // Volumetric Budget
+  document.getElementById('budgetRecharge').textContent = `${loc.recharge.toLocaleString()} MCM`;
+  document.getElementById('budgetExtract').textContent = `${loc.extract.toLocaleString()} MCM`;
+  document.getElementById('budgetSoe').textContent = `${loc.soe}%`;
+  document.getElementById('budgetDecline').textContent = `-${loc.decline} m/yr`;
+
+  renderPredictionTrendChart(loc);
+  renderExtractionPieChart(loc);
+  updateAIAnalysisDrivers(loc);
+  update3DWaterTableLevel(loc.score);
+}
+
+function renderPredictionTrendChart(loc) {
+  const ctx = document.getElementById('predictionTrendChart').getContext('2d');
+  const labels = ["-5 Mo", "-4 Mo", "-3 Mo", "-2 Mo", "-1 Mo", "Now", "+1 Mo", "+3 Mo", "+6 Mo"];
+
+  // Multi-series: Recorded, Predicted Trajectory, and 95% Confidence Upper Band
+  const recorded = [...loc.past, null, null, null];
+  const predicted = [null, null, null, null, null, loc.past[5], ...loc.forecast.slice(1)];
+  const upperBand = [null, null, null, null, null, loc.past[5], loc.forecast[1] + 3, loc.forecast[2] + 5, loc.forecast[3] + 6];
+
+  if (predictionChart) predictionChart.destroy();
+
+  predictionChart = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: labels,
+      datasets: [
+        {
+          label: 'Recorded Piezometric Index',
+          data: recorded,
+          borderColor: '#94A9B3',
+          backgroundColor: 'rgba(148, 169, 179, 0.08)',
+          fill: true,
+          tension: 0.3,
+          pointRadius: 4,
+          pointBackgroundColor: '#94A9B3'
+        },
+        {
+          label: 'AI Projected Depletion',
+          data: predicted,
+          borderColor: '#00F0FF',
+          backgroundColor: 'rgba(0, 240, 255, 0.15)',
+          borderDash: [5, 4],
+          fill: true,
+          tension: 0.35,
+          pointRadius: 5,
+          pointBackgroundColor: '#00F0FF'
+        },
+        {
+          label: 'Worst-Case Upper Bound (+95% CI)',
+          data: upperBand,
+          borderColor: 'rgba(239, 68, 68, 0.5)',
+          borderDash: [2, 2],
+          fill: false,
+          pointRadius: 0
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { labels: { color: '#94A9B3', font: { family: 'IBM Plex Mono', size: 10.5 }, usePointStyle: true } }
+      },
+      scales: {
+        y: { min: 0, max: 100, grid: { color: 'rgba(56, 189, 248, 0.08)' }, ticks: { color: '#5A707C', font: { family: 'IBM Plex Mono' } } },
+        x: { grid: { display: false }, ticks: { color: '#5A707C', font: { family: 'IBM Plex Mono' } } }
+      }
+    }
+  });
+}
+
+function renderExtractionPieChart(loc) {
+  const ctx = document.getElementById('extractionPieChart').getContext('2d');
+  if (pieChart) pieChart.destroy();
+
+  pieChart = new Chart(ctx, {
+    type: 'doughnut',
+    data: {
+      labels: ['Agriculture & Irrigation', 'Domestic Drinking', 'Industrial Draft'],
+      datasets: [{
+        data: [87, 9, 4],
+        backgroundColor: ['#00F0FF', '#10B981', '#F59E0B'],
+        borderWidth: 0
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { position: 'right', labels: { color: '#94A9B3', font: { family: 'Plus Jakarta Sans', size: 11 }, usePointStyle: true } }
+      }
+    }
+  });
+}
+
+/* =========================================================================
+   6. AI RISK ANALYSIS & EXPLAINABILITY (5 CORE DRIVERS)
+   ========================================================================= */
+
+let radarChart;
+
+function updateAIAnalysisDrivers(loc) {
+  document.getElementById('aiActiveBlockName').textContent = `${loc.name} (${loc.district})`;
+  const tier = getTierDetails(loc.score);
+  const badge = document.getElementById('aiActiveTierBadge');
+  badge.className = `risk-badge ${tier.class}`;
+  badge.innerHTML = `<span class="badge-pip"></span> ${tier.label} Stress`;
+
+  // 1. Rainfall Deficit
+  document.getElementById('aiValRain').textContent = `-${loc.rainDeficit}%`;
+  document.getElementById('aiBarRain').style.width = `${Math.min(100, loc.rainDeficit * 2.5)}%`;
+
+  // 2. Temperature Anomaly
+  document.getElementById('aiValTemp').textContent = `+${loc.tempAnomaly}°C`;
+  document.getElementById('aiBarTemp').style.width = `${Math.min(100, loc.tempAnomaly * 35)}%`;
+
+  // 3. Water Level Drop
+  document.getElementById('aiValDrop').textContent = `-${loc.decline} m/yr`;
+  document.getElementById('aiBarDrop').style.width = `${Math.min(100, loc.decline * 85)}%`;
+
+  // 4. Irrigation Demand
+  document.getElementById('aiValDraft').textContent = `${Math.min(99, loc.soe / 1.5).toFixed(1)}%`;
+  document.getElementById('aiBarDraft').style.width = `${Math.min(100, loc.soe / 1.5)}%`;
+
+  renderShapleyRadar(loc);
+}
+
+function renderShapleyRadar(loc) {
+  const ctx = document.getElementById('shapleyRadarChart').getContext('2d');
+  if (radarChart) radarChart.destroy();
+
+  radarChart = new Chart(ctx, {
+    type: 'radar',
+    data: {
+      labels: ['Rainfall Deficit', 'Heat Anomaly', 'Piezometric Decline', 'Irrigation Demand', 'Reservoir Storage'],
+      datasets: [{
+        label: `${loc.name} Attribution Weights`,
+        data: [
+          Math.min(100, loc.rainDeficit * 2.5),
+          Math.min(100, loc.tempAnomaly * 35),
+          Math.min(100, loc.decline * 85),
+          Math.min(100, loc.soe / 1.6),
+          65
+        ],
+        backgroundColor: 'rgba(0, 240, 255, 0.22)',
+        borderColor: '#00F0FF',
+        pointBackgroundColor: '#00F0FF',
+        borderWidth: 2
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: {
+        r: {
+          grid: { color: 'rgba(56, 189, 248, 0.12)' },
+          angleLines: { color: 'rgba(56, 189, 248, 0.12)' },
+          ticks: { display: false },
+          pointLabels: { color: '#94A9B3', font: { family: 'IBM Plex Mono', size: 10 } }
+        }
+      }
+    }
+  });
+}
+
+/* =========================================================================
+   7. ACTION CENTER INTERVENTIONS
+   ========================================================================= */
+
+const ACTION_DATABASE = {
+  recharge: {
+    title: "💧 Managed Aquifer Recharge (MAR) Protocols",
+    desc: "Engineered artificial recharge interventions to capture surplus surface runoff and directly recharge deep depleted fractures.",
+    items: [
+      { name: "Percolation Tanks in Ephemeral Nullahs", impact: "+12–18% Recharge Boost", detail: "Construct small earthen storage basins along 2nd and 3rd order streams to maximize natural gravity infiltration." },
+      { name: "Direct Injection Recharge Shafts", impact: "Direct Aquifer Feeding", detail: "Install reverse-flow gravel/sand filtered recharge shafts adjacent to dry agricultural dug wells." },
+      { name: "Sub-surface Check Dams", impact: "Zero Evaporation Loss", detail: "Underground impermeable barriers keyed into bedrock preventing lateral groundwater leakage along dry river valleys." }
+    ]
+  },
+  harvest: {
+    title: "🌧️ Decentralized Rainwater Harvesting",
+    desc: "Capturing monsoon precipitation directly at source before it turns into high-velocity soil-eroding runoff.",
+    items: [
+      { name: "Krishi Honda (Farm Ponds)", impact: "250–500 m³ On-Farm Storage", detail: "Lined farm ponds to store unabsorbed monsoon runoff for critical life-saving supplemental irrigation." },
+      { name: "Rooftop Catchment & Sump Integration", impact: "Potable Drinking Relief", detail: "Mandatory catchment pipes feeding household filtration tanks in habitations experiencing fluoride contamination." },
+      { name: "Continuous Contour Trenches (CCT)", impact: "Erosion & Runoff Buffer", detail: "Hillside contour earthworks to decelerate sheet runoff and replenish weathered plateau strata." }
+    ]
+  },
+  irrigation: {
+    title: "🌾 Precision Micro-Irrigation Optimization",
+    desc: "Technological shifts to reduce the agricultural water withdrawal footprint by 35% to 60%.",
+    items: [
+      { name: "Automated Drip & Sub-Surface Fertigation", impact: "50% Water Savings", detail: "Targeted root-zone micro-drip delivery preventing surface evaporation in orchards, cotton, and vegetables." },
+      { name: "Alternate Wetting and Drying (AWD) for Rice", impact: "30% Groundwater Drop Cut", detail: "Periodic field drying cycles during tillering stage maintaining paddy yield while slashing pump hours." },
+      { name: "Laser Land Leveling Mandate", impact: "20% Uniform Infiltration", detail: "Precision grading of fields to eliminate localized puddling and improve field water application efficiency." }
+    ]
+  },
+  crops: {
+    title: "🌱 Crop Planning & Diversification Matrix",
+    desc: "Strategic substitution of water-intensive monocultures with climate-resilient nutri-cereals.",
+    items: [
+      { name: "Switch Summer Paddy to Bajra (Pearl Millet)", impact: "Saves ~900 mm Water/ha", detail: "Deep-rooted millet requires only 250–350 mm per season compared to >1,200 mm for flood-irrigated summer rice." },
+      { name: "Rabi Wheat Substitution with Mustard / Chickpea", impact: "Saves ~200 mm Water/ha", detail: "Requires only 2 timely irrigations; enriches soil nitrogen through rhizobial fixation." },
+      { name: "Sugarcane Acreage Cap & Drip Mandate", impact: "Immediate Overdraft Halt", detail: "Prohibit flood-irrigated sugarcane in over-exploited blocks; provide 85% subsidies for automated micro-drip." }
+    ]
+  }
+};
+
+function switchActionCategory(catId, btnEl) {
+  document.querySelectorAll('.action-tab-card').forEach(b => b.classList.remove('active'));
+  if (btnEl) btnEl.classList.add('active');
+
+  const data = ACTION_DATABASE[catId];
+  const panel = document.getElementById('actionContentPanel');
+  panel.innerHTML = `
+    <h3>${data.title}</h3>
+    <p style="font-size:13.5px; color:var(--text-secondary); margin-top:4px; margin-bottom:20px;">${data.desc}</p>
+    <div style="display:flex; flex-direction:column; gap:12px;">
+      ${data.items.map(item => `
+        <div style="padding:16px; background:rgba(7,17,22,0.6); border:1px solid var(--line); border-radius:var(--radius-sm);">
+          <div style="display:flex; justify-content:space-between; align-items:center;">
+            <b style="font-size:14.5px;">${item.name}</b>
+            <span class="mono" style="font-size:11px; color:var(--cyan-glow); background:rgba(0,240,255,0.08); padding:3px 8px; border-radius:4px;">${item.impact}</span>
+          </div>
+          <div style="font-size:12.5px; color:var(--text-secondary); margin-top:6px; line-height:1.5;">${item.detail}</div>
+        </div>
+      `).join('')}
+    </div>
+  `;
+}
+
+/* =========================================================================
+   8. WHAT-IF SCENARIO SIMULATOR ENGINE
+   ========================================================================= */
+
+function resetSimulationControls() {
+  document.getElementById('simSlideRain').value = -locDeficit();
+  document.getElementById('simSlideExtract').value = activeBlock.soe;
+  document.getElementById('simSlideTemp').value = 15;
+  document.getElementById('simSlideCrop').value = 25;
+  executeScenarioSimulation();
+}
+
+function locDeficit() {
+  return activeBlock ? activeBlock.rainDeficit : 20;
+}
+
+function executeScenarioSimulation() {
+  const rainDev = parseInt(document.getElementById('simSlideRain').value);
+  const extractLoad = parseInt(document.getElementById('simSlideExtract').value);
+  const tempDev = parseInt(document.getElementById('simSlideTemp').value) / 10;
+  const cropShift = parseInt(document.getElementById('simSlideCrop').value);
+
+  // Update slider text displays
+  document.getElementById('simValRain').textContent = `${rainDev >= 0 ? '+' : ''}${rainDev}%`;
+  document.getElementById('simValExtract').textContent = `${extractLoad}%`;
+  document.getElementById('simValTemp').textContent = `+${tempDev.toFixed(1)}°C`;
+  document.getElementById('simValCrop').textContent = `${cropShift}%`;
+
+  // Physics-guided Simulation Equation:
+  // Base = (Extraction * 0.42) - (Rainfall * 0.35) + (Temp * 4.5) - (CropShift * 0.28)
+  const extractionStress = extractLoad * 0.44;
+  const rainStress = Math.max(0, -rainDev * 0.75);
+  const heatStress = tempDev * 3.8;
+  const mitigationSavings = cropShift * 0.32;
+
+  let simScore = Math.round(extractionStress + rainStress + heatStress - mitigationSavings);
+  simScore = Math.max(8, Math.min(99, simScore));
+
+  const tier = getTierDetails(simScore);
+  const scoreEl = document.getElementById('simResultScore');
+  scoreEl.textContent = `${simScore}%`;
+  scoreEl.style.color = tier.color;
+
+  const badge = document.getElementById('simResultBadge');
+  badge.className = `risk-badge ${tier.class}`;
+  badge.innerHTML = `<span class="badge-pip"></span> ${tier.label} Risk`;
+
+  // Projected days left before summer pump drawdown
+  const daysLeft = Math.max(12, Math.round(180 - (simScore * 1.45)));
+  document.getElementById('simDaysLeft').textContent = `${daysLeft} Days`;
+  document.getElementById('simDaysLeft').style.color = daysLeft < 60 ? 'var(--risk-crit)' : 'var(--risk-mod)';
+
+  // Volumetric Net balance in MCM
+  const netMcm = Math.round(activeBlock.recharge * (1 + (rainDev / 100)) - (activeBlock.extract * (extractLoad / 100)) * (1 - (cropShift / 250)));
+  document.getElementById('simNetMCM').textContent = `${netMcm >= 0 ? '+' : ''}${netMcm} MCM`;
+  document.getElementById('simNetMCM').style.color = netMcm < 0 ? 'var(--risk-crit)' : 'var(--risk-low)';
+
+  // Update narrative synthesis
+  let narrative = "";
+  if (simScore >= 81) {
+    narrative = `Severe crisis scenario: A <b>${rainDev}% rainfall deviation</b> combined with <b>${extractLoad}% extraction load</b> depletes static fracture reserves rapidly. Pumping failure projected within <b>${daysLeft} days</b>. Emergency power rationing and tanker deployment mandatory.`;
+  } else if (simScore >= 61) {
+    narrative = `Elevated vulnerability: Piezometric head is projected to drop by ~2.1m before summer. The <b>${cropShift}% crop diversification</b> successfully preserves ${Math.abs(netMcm)} MCM of water, keeping drinking borewells functional.`;
+  } else {
+    narrative = `Sustainable equilibrium: Sowing climate-resilient nutri-cereals and moderated pumping prevents groundwater depletion. Aquifer net balance remains positive (+${netMcm} MCM).`;
+  }
+  document.getElementById('simResultNarrative').innerHTML = narrative;
+
+  // Live update to the 3D Water Table Visual!
+  update3DWaterTableLevel(simScore);
+}
+
+/* =========================================================================
+   9. BOOTSTRAP INITIALIZATION
+   ========================================================================= */
+
+window.addEventListener('DOMContentLoaded', () => {
+  init3DGroundwaterVisual();
+  initLeafletMap();
+  initPredictionDropdown();
+  switchActionCategory('recharge', document.querySelector('.action-tab-card'));
+  executeScenarioSimulation();
+});
+</script>
+</body>
+</html>
